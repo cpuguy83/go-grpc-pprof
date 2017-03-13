@@ -1,0 +1,67 @@
+syntax = 'proto3';
+
+import "google/protobuf/duration.proto";
+
+// Exports pprof data to clients
+service PProfService {
+	rpc Cmdline(CmdlineRequest) returns (CmdlineResponse) {}
+	rpc CPUProfile(CPUProfileRequest) returns (stream Chunk) {}
+	rpc Trace(TraceRequest) returns (stream Chunk) {}
+	rpc Symbol(SymbolRequest) returns (SymbolResponse) {}
+	rpc Lookup(LookupRequest) returns(LookupResponse) {}
+}
+
+// Chunk is used by endpoints that send opaque chunks of data
+message Chunk{
+	bytes chunk = 1;
+}
+
+// CmdlineRequest is used by the `PProfService` `Cmdline` endpoint.
+// It is currently just an empty request.
+message CmdlineRequest{
+}
+
+// CmdlineResponse is responded by the `PProfService` `Cmdline` endpoint.
+// It contains the command line options used to start the running process as a
+// set of null-terminated strings.
+message CmdlineResponse {
+	string command = 1;
+}
+
+
+// CPURequest is used with the `PProfService` `CPU` endpoint.
+message CPUProfileRequest {
+	google.protobuf.Duration duration = 1;
+}
+
+// CPURequest is used with the `PProfService` `Trace` endpoint.
+message TraceRequest {
+	google.protobuf.Duration duration = 1;
+}
+
+// SymbolRequest is used with the `PProfService` `Symbol` endpoint.
+message SymbolRequest{
+	 uint64 symbol = 1;
+}
+
+// LookupRequest is used with the `PProfService` `Lookup` endpoint.
+// It is used to specify the profile data to lookup, e.g. `goroutine`, `heap`.
+// See https://golang.org/pkg/runtime/pprof/#PProf
+message LookupRequest {
+	string name = 1;
+	int32 debug = 2;
+	bool gc_before_heap = 3;
+}
+
+// SymbolResponse is used with the `PProfService` `Symbol` endpoint.
+// It returns the name/symbol mapping
+message SymbolResponse {
+	string name = 1;
+	uint64 symbol = 2;
+}
+
+// LookupResponse is used with the `PProfService` `Lookup` endpoint.
+// containing an opaque blob suitable for consumption by pprof tooling.
+message LookupResponse {
+	bytes data = 1;
+}
