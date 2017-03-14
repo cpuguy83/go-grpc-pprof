@@ -6,10 +6,9 @@ import (
 )
 
 // NewChunkReader creates an io.Reader from a ChunkReceiver.
-// You can optionally pass in your own buffer to use or one will be created.
 // The reader works to stitch back together Chunks (a protobuf encapsulated stream of bytes)
 // as a single stream.
-func NewChunkReader(recv ChunkReceiver, buf []byte) io.Reader {
+func NewChunkReader(recv ChunkReceiver) io.Reader {
 	return &chunkReader{r: recv}
 }
 

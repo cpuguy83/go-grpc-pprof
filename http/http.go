@@ -85,7 +85,7 @@ func (p *httpProxy) CPUProfile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	r := api.NewChunkReader(stream, nil)
+	r := api.NewChunkReader(stream)
 	w.Header().Set("Content-Type", "application/octet-stream")
 	io.Copy(makeFlusher(w), r)
 }
@@ -104,7 +104,7 @@ func (p *httpProxy) Trace(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	r := api.NewChunkReader(stream, nil)
+	r := api.NewChunkReader(stream)
 	w.Header().Set("Content-Type", "application/octet-stream")
 	io.Copy(makeFlusher(w), r)
 }
