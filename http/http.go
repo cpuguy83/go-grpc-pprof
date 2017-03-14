@@ -34,11 +34,11 @@ func mkError(w http.ResponseWriter, err error) {
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
-// NewHTTPProxy returns a pprof http proxy which proxies requests to a grpc
+// NewProxy returns a pprof http proxy which proxies requests to a grpc
 // service.
 // It returns an http.Handler that you can use to route requests to.
 // For instance `http.Handle("/debug/pprof/", NewHTTPProxy(client)`
-func NewHTTPProxy(c api.PProfServiceClient) http.Handler {
+func NewProxy(c api.PProfServiceClient) http.Handler {
 	return &httpProxy{c}
 }
 
@@ -47,7 +47,7 @@ type httpProxy struct {
 }
 
 func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch path.Base(requ.URL.Path) {
+	switch path.Base(r.URL.Path) {
 	case "profile":
 		p.CPUProfile(w, r)
 	case "cmdline":
@@ -87,7 +87,8 @@ func (p *httpProxy) CPUProfile(w http.ResponseWriter, req *http.Request) {
 
 	r := api.NewChunkReader(stream, nil)
 	w.Header().Set("Content-Type", "application/octet-stream")
-	io.Copy(w, r)
+	io.Copy(makeFlusher(w), r)
+	stream.CloseSend()
 }
 
 func (p *httpProxy) Trace(w http.ResponseWriter, req *http.Request) {
@@ -106,7 +107,7 @@ func (p *httpProxy) Trace(w http.ResponseWriter, req *http.Request) {
 
 	r := api.NewChunkReader(stream, nil)
 	w.Header().Set("Content-Type", "application/octet-stream")
-	io.Copy(w, r)
+	io.Copy(makeFlusher(w), r)
 }
 
 // much of this is taken from net/http/pprof with some the actual runtime call
@@ -124,10 +125,10 @@ func (p *httpProxy) Symbol(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(&buf, "num_symbols: 1\n")
 
 	var b *bufio.Reader
-	if r.Method == "POST" {
-		b = bufio.NewReader(r.Body)
+	if req.Method == "POST" {
+		b = bufio.NewReader(req.Body)
 	} else {
-		b = bufio.NewReader(strings.NewReader(r.URL.RawQuery))
+		b = bufio.NewReader(strings.NewReader(req.URL.RawQuery))
 	}
 
 	var symbols []uint64
@@ -139,7 +140,7 @@ func (p *httpProxy) Symbol(w http.ResponseWriter, req *http.Request) {
 		}
 		pc, _ := strconv.ParseUint(string(word), 0, 64)
 		if pc != 0 {
-			symbols = append(symbols, symbol)
+			symbols = append(symbols, pc)
 
 			// Call GRPC instead of runtime
 			// This is where this code differs from net/http/pprof
@@ -147,7 +148,7 @@ func (p *httpProxy) Symbol(w http.ResponseWriter, req *http.Request) {
 				Symbol: pc,
 			})
 			if err == nil {
-				fmt.Fprintf(&buf, "%#x %s\n", pc, f.Name())
+				fmt.Fprintf(&buf, "%#x %s\n", res.Symbol, res.Name)
 			}
 
 		}
@@ -163,12 +164,12 @@ func (p *httpProxy) Symbol(w http.ResponseWriter, req *http.Request) {
 }
 
 func (p *httpProxy) Lookup(w http.ResponseWriter, req *http.Request) {
-	debug, _ := strconv.Atoi(r.FormValue("debug"))
-	gc, _ := strconv.Atoi(r.FormValue("gc"))
+	debug, _ := strconv.Atoi(req.FormValue("debug"))
+	gc, _ := strconv.Atoi(req.FormValue("gc"))
 	res, err := p.c.Lookup(req.Context(), &api.LookupRequest{
-		Name:         strings.TrimPrefix(r.URL.Path, "/debug/pprof/"),
-		Debug:        debug,
-		GcBeforeHeap: gc,
+		Name:         strings.TrimPrefix(req.URL.Path, "/debug/pprof/"),
+		Debug:        int32(debug),
+		GcBeforeHeap: gc > 0,
 	})
 
 	if err != nil {

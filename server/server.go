@@ -32,7 +32,7 @@ func (s server) Cmdline(ctx context.Context, req *api.CmdlineRequest) (*api.Cmdl
 
 func (s server) CPUProfile(req *api.CPUProfileRequest, stream api.PProfService_CPUProfileServer) error {
 	duration, err := gogotypes.DurationFromProto(req.Duration)
-	if err != nil {
+	if err != nil || duration == 0 {
 		return grpc.Errorf(codes.InvalidArgument, "passed in duration is invalid: %v", req.Duration)
 	}
 
@@ -50,7 +50,7 @@ func (s server) CPUProfile(req *api.CPUProfileRequest, stream api.PProfService_C
 
 func (s server) Trace(req *api.TraceRequest, stream api.PProfService_TraceServer) error {
 	duration, err := gogotypes.DurationFromProto(req.Duration)
-	if err != nil {
+	if err != nil || duration == 0 {
 		return grpc.Errorf(codes.InvalidArgument, "passed in duration is invalid: %v", req.Duration)
 	}
 

@@ -28,24 +28,15 @@ type chunkReader struct {
 }
 
 func (r *chunkReader) Read(b []byte) (nr int, err error) {
-	nr, err = r.buf.Read(b)
-
-	for {
-		if nr < len(b) {
-			chunk, err := r.r.Recv()
-			if err != nil {
-				return nr, err
-			}
-
-			if _, err := r.buf.Write(chunk.Chunk); err != nil {
-				return nr, err
-			}
-
-			n, err := r.buf.Read(b[nr:])
-			nr += n
-			if err != nil {
-				return nr, err
-			}
+	var chunk *Chunk
+	for r.buf.Len() < len(b) {
+		chunk, err = r.r.Recv()
+		if chunk != nil {
+			r.buf.Write(chunk.Chunk)
+		}
+		if err != nil {
+			break
 		}
 	}
+	return r.buf.Read(b)
 }
