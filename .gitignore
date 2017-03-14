@@ -1,0 +1,3 @@
+cmd/proxy/proxy
+cmd/server/server
+*.sock
