@@ -34,13 +34,13 @@ func main() {
 func withLogs(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	logrus.WithField("req", req).WithField("url", info.FullMethod).Debug("Start")
 	resp, err = handler(ctx, req)
-	logrus.WithField("req", req).WithField("url", info.FullMethod).Debug("Start")
+	logrus.WithField("req", req).WithField("url", info.FullMethod).Debug("End")
 	return
 }
 
 func withStreamLogs(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 	logrus.WithField("req", srv).WithField("url", info.FullMethod).Debug("Start")
 	err := handler(srv, ss)
-	logrus.WithField("req", srv).WithField("url", info.FullMethod).Debug("Start")
+	logrus.WithField("req", srv).WithField("url", info.FullMethod).Debug("End")
 	return err
 }
